@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ciza Finance | Management Suite</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        .receipt-border { border: 2px solid #000; }
+        .stamp-box { border: 1px dashed #999; width: 85px; height: 100px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 10px; color: #666; margin-bottom: 8px; }
+        .tab-active { border-bottom: 3px solid #1e40af; color: #1e40af; }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+
+    <div class="max-w-7xl mx-auto">
+        <div class="flex flex-col md:flex-row justify-between items-center mb-8 bg-white p-6 rounded-xl shadow-sm border-b-4 border-blue-800">
+            <div>
+                <h1 class="text-3xl font-black tracking-tighter text-blue-900 uppercase">Ciza Finance</h1>
+                <p class="text-xs font-bold tracking-widest text-gray-500 uppercase">Internal Management Suite</p>
+            </div>
+            <div class="flex space-x-4 mt-4 md:mt-0">
+                <button onclick="switchTab('loan-gen')" id="btn-loan" class="px-4 py-2 font-bold text-sm tab-active uppercase">Loan Generator</button>
+                <button onclick="switchTab('allocator')" id="btn-alloc" class="px-4 py-2 font-bold text-sm text-gray-400 hover:text-blue-700 uppercase">Capital Allocator</button>
+            </div>
+        </div>
+
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+           
+            <div class="lg:col-span-1 space-y-6">
+               
+                <div id="pane-loan" class="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-bold text-blue-700">Loan Entry</h2>
+                        <button type="button" onclick="window.location.reload()" class="text-xs text-red-500 hover:underline font-bold">CLEAR</button>
+                    </div>
+                   
+                    <form id="loanForm" class="space-y-4">
+                        <input type="text" id="inName" placeholder="Borrower Name" class="w-full p-2 border rounded outline-none focus:ring-2 focus:ring-blue-400">
+                        <input type="text" id="inAadhaar" placeholder="Aadhaar (12 Digits)" maxlength="14" class="w-full p-2 border rounded outline-none focus:ring-2 focus:ring-blue-400">
+                       
+                        <div class="space-y-2">
+                            <label class="block text-xs font-bold text-gray-500 uppercase">Collateral Type</label>
+                            <select id="collateralSelect" class="w-full p-2 border rounded bg-gray-50 font-semibold text-sm">
+                                <option value="PDC">Post Dated Cheque (PDC)</option>
+                                <option value="Device">Electronic Device (Mobile/Laptop)</option>
+                                <option value="Vehicle">Vehicle Documents</option>
+                                <option value="Gold">Gold/Jewelry</option>
+                                <option value="Others">Others</option>
+                            </select>
+                            <input type="text" id="inCollateralDetails" placeholder="Enter Cheque No. & Bank Name" class="w-full p-2 border rounded border-blue-300 bg-blue-50 text-sm">
+                        </div>
+
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-[10px] font-bold text-gray-400">PRINCIPAL (₹)</label>
+                                <input type="number" id="inPrincipal" class="w-full p-2 border rounded text-sm" placeholder="0.00">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-gray-400">INTEREST (₹)</label>
+                                <input type="number" id="inInterest" class="w-full p-2 border rounded text-sm" placeholder="0.00">
+                            </div>
+                        </div>
+
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <input type="date" id="inIssueDate" class="p-2 border rounded text-xs">
+                            <input type="date" id="inDueDate" class="p-2 border rounded text-xs">
+                        </div>
+
+
+                        <button type="button" onclick="generatePDF()" class="w-full bg-blue-800 text-white font-bold py-3 rounded-lg hover:bg-blue-900 transition text-sm">
+                            Download PDF Slip
+                        </button>
+                       
+                        <button type="button" onclick="generateTextMessage()" class="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 transition text-sm">
+                            Generate Text Message
+                        </button>
+                    </form>
+
+
+                    <div id="msgArea" class="hidden mt-6 p-4 bg-green-50 border-2 border-green-200 rounded-lg">
+                        <h3 class="text-xs font-bold text-green-800 mb-2 uppercase">Copy for WhatsApp/SMS:</h3>
+                        <textarea id="textMsgContent" class="w-full h-48 text-xs p-2 border rounded bg-white" readonly></textarea>
+                        <button onclick="copyMsg()" class="mt-2 w-full bg-green-200 text-green-800 text-xs font-bold py-1 rounded">Copy Text</button>
+                    </div>
+                </div>
+
+
+                <div id="pane-alloc" class="hidden bg-slate-900 p-6 rounded-xl shadow-lg text-white">
+                    <h2 class="text-xl font-bold mb-6 text-blue-400">Capital Allocator</h2>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Gross Inflow (₹)</label>
+                            <input type="number" id="amt" oninput="split()" class="w-full p-2 bg-slate-800 border border-slate-700 rounded text-xl text-blue-400 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Deductions/Debt (₹)</label>
+                            <input type="number" id="debt" oninput="split()" class="w-full p-2 bg-slate-800 border border-slate-700 rounded text-xl text-yellow-500 outline-none">
+                        </div>
+
+
+                        <div class="bg-blue-900/30 p-4 rounded-lg text-center border border-dashed border-blue-500">
+                            <label class="text-[10px] block uppercase text-blue-300">Remaining Balance</label>
+                            <span id="netVal" class="text-2xl font-black">₹0.00</span>
+                        </div>
+
+
+                        <div class="py-4">
+                            <div class="flex justify-between text-xs font-bold mb-2">
+                                <span>RATIO</span>
+                                <span id="ratioText" class="text-blue-400">20 / 80</span>
+                            </div>
+                            <input type="range" id="ratio" min="0" max="100" value="20" oninput="split()" class="w-full accent-blue-500">
+                        </div>
+
+
+                        <div class="grid gap-3">
+                            <div class="bg-slate-800 p-3 rounded-lg border-l-4 border-rose-500">
+                                <div class="text-[10px] text-slate-400 uppercase" id="lblSpend">Spending (20%)</div>
+                                <div id="valSpend" class="text-xl font-bold text-rose-400">₹0.00</div>
+                                <div id="pSpend" class="text-[10px] text-slate-500">0 Paise</div>
+                            </div>
+                            <div class="bg-slate-800 p-3 rounded-lg border-l-4 border-emerald-500">
+                                <div class="text-[10px] text-slate-400 uppercase" id="lblSave">Savings (80%)</div>
+                                <div id="valSave" class="text-xl font-bold text-emerald-400">₹0.00</div>
+                                <div id="pSave" class="text-[10px] text-slate-500">0 Paise</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <div class="lg:col-span-2">
+                <div class="sticky top-8">
+                    <div id="pdf-content" class="bg-white p-10 receipt-border shadow-sm mx-auto max-w-[800px]">
+                        <div class="text-center border-b-4 border-black pb-4 mb-6">
+                            <h1 class="text-4xl font-black tracking-tighter">ciza FINANCE</h1>
+                            <p class="text-sm font-bold tracking-widest uppercase text-gray-600">Loan Information Slip</p>
+                        </div>
+
+
+                        <div class="space-y-6 text-sm">
+                            <section>
+                                <h3 class="font-bold bg-gray-100 px-2 py-1 mb-2 text-xs uppercase">Borrower Details</h3>
+                                <div class="px-2 space-y-1">
+                                    <p><strong>Name:</strong> <span id="outName">---</span></p>
+                                    <p><strong>Aadhaar:</strong> <span id="outAadhaar">---- ---- ----</span></p>
+                                </div>
+                            </section>
+
+
+                            <section>
+                                <h3 class="font-bold bg-gray-100 px-2 py-1 mb-2 text-xs uppercase">Loan Terms</h3>
+                                <div class="px-2 grid grid-cols-2 gap-y-1">
+                                    <p><strong>Principal:</strong> ₹<span id="outPrincipal"> - - </span></p>
+                                    <p><strong>Interest:</strong> ₹<span id="outInterest"> - - </span></p>
+                                    <p class="col-span-2 font-bold text-lg border-t mt-2 pt-1">Total Repayment: ₹<span id="outTotal"> - - </span></p>
+                                    <p class="text-[10px] mt-1 italic uppercase text-gray-500">Issued: <span id="outIssueDate">---</span> | Due: <span id="outDueDate">---</span></p>
+                                </div>
+                            </section>
+
+
+                            <section>
+                                <h3 class="font-bold bg-gray-100 px-2 py-1 mb-2 text-xs text-blue-800 uppercase">Security / Collateral</h3>
+                                <div class="px-2">
+                                    <p><strong id="outCollateralLabel">PDC:</strong> <span id="outCollateralDetails">[Details Required]</span></p>
+                                </div>
+                            </section>
+
+
+                            <section class="border p-4 text-[11px] leading-relaxed text-gray-900 bg-gray-50/50">
+                                <strong>DECLARATION:</strong><br>
+                                I, <span id="outDeclName" class="font-bold">---</span>, acknowledge receipt of ₹<span id="outDeclPrincipal" class="font-bold"> - - </span> and unconditionally promise to pay the total sum of ₹<span id="outDeclTotal" class="font-bold"> - - </span> to Ciza Finance by the Due Date (<span id="outDeclDueDate" class="font-bold"> - - </span>). I understand that a late fee of ₹200 per day applies for a maximum of <span class="font-bold">5 days</span>, after which legal action or collateral seizure may begin.
+                            </section>
+
+
+                            <div class="flex justify-between items-end pt-12">
+                                <div class="flex flex-col items-center">
+                                    <div class="stamp-box">Affix<br>Revenue<br>Stamp</div>
+                                    <div class="border-t-2 border-black w-44 text-center font-bold text-[10px] pt-1 uppercase">Borrower Signature</div>
+                                </div>
+                                <div class="flex flex-col items-center">
+                                    <div class="h-[108px]"></div>
+                                    <div class="border-t-2 border-black w-44 text-center font-bold text-[10px] pt-1 uppercase">Witness Signature</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        /* TAB LOGIC */
+        function switchTab(tab) {
+            const pLoan = document.getElementById('pane-loan');
+            const pAlloc = document.getElementById('pane-alloc');
+            const bLoan = document.getElementById('btn-loan');
+            const bAlloc = document.getElementById('btn-alloc');
+
+
+            if(tab === 'loan-gen') {
+                pLoan.classList.remove('hidden');
+                pAlloc.classList.add('hidden');
+                bLoan.classList.add('tab-active'); bLoan.classList.remove('text-gray-400');
+                bAlloc.classList.remove('tab-active'); bAlloc.classList.add('text-gray-400');
+            } else {
+                pLoan.classList.add('hidden');
+                pAlloc.classList.remove('hidden');
+                bAlloc.classList.add('tab-active'); bAlloc.classList.remove('text-gray-400');
+                bLoan.classList.remove('tab-active'); bLoan.classList.add('text-gray-400');
+            }
+        }
+
+
+        /* PROJECT 2 LOGIC (LOAN GEN) */
+        const collateralSelect = document.getElementById('collateralSelect');
+        const collateralInput = document.getElementById('inCollateralDetails');
+        const outLabel = document.getElementById('outCollateralLabel');
+
+
+        const collateralMap = {
+            "PDC": "Enter Cheque No. & Bank Name",
+            "Device": "Enter Brand, Model & Serial No",
+            "Vehicle": "Enter Vehicle Reg No. & Model",
+            "Gold": "Enter Weight & Item Description",
+            "Others": "Enter Specific Collateral Details"
+        };
+
+
+        collateralSelect.addEventListener('change', (e) => {
+            collateralInput.placeholder = collateralMap[e.target.value];
+            outLabel.innerText = e.target.value + ":";
+            updatePreview();
+        });
+
+
+        document.getElementById('inAadhaar').addEventListener('input', function (e) {
+            let value = e.target.value.replace(/\D/g, '');
+            let formattedValue = value.match(/.{1,4}/g)?.join(' ') || '';
+            e.target.value = formattedValue;
+            updatePreview();
+        });
+
+
+        function updatePreview() {
+            const nameVal = document.getElementById('inName').value || "---";
+            const aadhaarVal = document.getElementById('inAadhaar').value || "---- ---- ----";
+            document.getElementById('outName').innerText = nameVal;
+            document.getElementById('outDeclName').innerText = nameVal;
+            document.getElementById('outAadhaar').innerText = aadhaarVal;
+
+
+            const p = parseFloat(document.getElementById('inPrincipal').value) || 0;
+            const i = parseFloat(document.getElementById('inInterest').value) || 0;
+            const total = p + i;
+
+
+            document.getElementById('outPrincipal').innerText = p.toLocaleString('en-IN');
+            document.getElementById('outInterest').innerText = i.toLocaleString('en-IN');
+            document.getElementById('outTotal').innerText = total.toLocaleString('en-IN');
+            document.getElementById('outDeclPrincipal').innerText = p.toLocaleString('en-IN');
+            document.getElementById('outDeclTotal').innerText = total.toLocaleString('en-IN');
+           
+            const dueDate = document.getElementById('inDueDate').value || "---";
+            document.getElementById('outDueDate').innerText = dueDate;
+            document.getElementById('outDeclDueDate').innerText = dueDate;
+
+
+            document.getElementById('outCollateralDetails').innerText = collateralInput.value || "[Details Required]";
+            document.getElementById('outIssueDate').innerText = document.getElementById('inIssueDate').value || "---";
+        }
+
+
+        function generateTextMessage() {
+            updatePreview();
+            const name = document.getElementById('inName').value;
+            const aadhaar = document.getElementById('inAadhaar').value;
+            const principal = document.getElementById('outPrincipal').innerText;
+            const total = document.getElementById('outTotal').innerText;
+            const due = document.getElementById('outDueDate').innerText;
+            const collateralType = collateralSelect.value;
+            const collateralInfo = collateralInput.value;
+
+
+            const message = `ciza FINANCE - LOAN INFO SLIP\n\n` +
+                          `Borrower: ${name}\n` +
+                          `Aadhaar: ${aadhaar}\n` +
+                          `Principal: ₹${principal}\n` +
+                          `Total Repayment: ₹${total}\n` +
+                          `Due Date: ${due}\n` +
+                          `Collateral (${collateralType}): ${collateralInfo}\n\n` +
+                          `Late Payment Terms:\n` +
+                          `If , ${name} fails to pay on ${due}, late charges ₹200 per day apply for 5 days. On the 5th day, payment is mandatory.`;
+            document.getElementById('msgArea').classList.remove('hidden');
+            document.getElementById('textMsgContent').value = message;
+        }
+
+
+        function copyMsg() {
+            const copyText = document.getElementById("textMsgContent");
+            copyText.select();
+            document.execCommand("copy");
+            alert("Message copied to clipboard!");
+        }
+
+
+        function generatePDF() {
+            const element = document.getElementById('pdf-content');
+            const name = document.getElementById('inName').value || 'Loan';
+            html2pdf().set({
+                margin: 0.5,
+                filename: `Ciza_Finance_${name}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 3 },
+                jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+            }).from(element).save();
+        }
+
+
+        /* PROJECT 1 LOGIC (ALLOCATOR) */
+        function split() {
+            const gross = parseFloat(document.getElementById('amt').value) || 0;
+            const debt = parseFloat(document.getElementById('debt').value) || 0;
+            const ratio = parseInt(document.getElementById('ratio').value);
+           
+            const net = gross - debt;
+            const displayNet = net < 0 ? 0 : net;
+
+
+            const s1Per = ratio;
+            const s2Per = 100 - ratio;
+
+
+            const s1Amt = displayNet * (s1Per / 100);
+            const s2Amt = displayNet * (s2Per / 100);
+
+
+            document.getElementById('netVal').innerText = "₹" + net.toLocaleString('en-IN', { minimumFractionDigits: 2 });
+            document.getElementById('netVal').style.color = net < 0 ? "#f43f5e" : "#60a5fa";
+
+
+            document.getElementById('ratioText').innerText = `${s1Per} / ${s2Per}`;
+            document.getElementById('lblSpend').innerText = `Spending (${s1Per}%)`;
+            document.getElementById('lblSave').innerText = `Savings (${s2Per}%)`;
+
+
+            document.getElementById('valSpend').innerText = "₹" + s1Amt.toLocaleString('en-IN', { minimumFractionDigits: 2 });
+            document.getElementById('valSave').innerText = "₹" + s2Amt.toLocaleString('en-IN', { minimumFractionDigits: 2 });
+
+
+            document.getElementById('pSpend').innerText = Math.round((Math.abs(s1Amt) % 1) * 100) + " Paise";
+            document.getElementById('pSave').innerText = Math.round((Math.abs(s2Amt) % 1) * 100) + " Paise";
+        }
+
+
+        // Initialize listeners
+        document.querySelectorAll('#loanForm input').forEach(input => {
+            input.addEventListener('input', updatePreview);
+        });
+    </script>
+</body>
+</html>
+
